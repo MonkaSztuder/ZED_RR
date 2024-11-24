@@ -26,6 +26,7 @@ set.seed(123)
 - caret
 - DT
 - knitr
+- randomForest
 
 ```{r import, include=FALSE}
 library(tidyverse)
@@ -36,7 +37,9 @@ library(corrplot)
 library(caret)
 library(DT)
 library(knitr)
-
+install.packages("caret", dependencies = c("Depends", "Suggests"))
+library(caret)
+library(randomForest)
 ```
 
 ```{r prt, echo=FALSE}
@@ -372,4 +375,114 @@ ggplot(mydata, aes(x = Volumetric.Capacity, y = Atomic.Fraction.Discharge)) +
   ylim(0, 1)
 ```
 
+# Predykcje
+## Stability Charge
 
+W przypadku predykcji stabilności naładowania, wykorzystamy regresję liniową.
+
+```{r n10_predictions_charge}
+predictors <- mydata[, c("Average.Voltage", "Max.Delta.Volume", "Volumetric.Capacity")]
+response <- mydata$Stability.Charge
+
+trainIndex <- createDataPartition(response, p = .8, 
+                                  list = FALSE, 
+                                  times = 1)
+trainData <- mydata[trainIndex,]
+testData <- mydata[-trainIndex,]
+
+model <- train(Stability.Charge ~ Average.Voltage + Max.Delta.Volume + Volumetric.Capacity, 
+               data = trainData, 
+               method = "lm")
+
+#print(summary(model))
+
+predictions <- predict(model, newdata = testData)
+#postResample(predictions, testData$Stability.Charge)
+evaluation <- postResample(predictions, testData$Stability.Charge)
+
+summary_table <- data.frame(
+  Metric = c("RMSE", "Rsquared", "MAE"),
+  Value = c(evaluation["RMSE"], 
+            evaluation["Rsquared"], 
+            evaluation["MAE"])
+)
+
+knitr::kable(summary_table[2], col.names = c("Metric", "Value"), caption = "Model Summary for Stability.Charge")
+
+
+ggplot(testData, aes(x = Stability.Charge, y = predictions)) +
+  geom_point(color = "black") +
+  geom_abline(slope = 1, intercept = 0, color = "red") +
+  theme_minimal() +
+  labs(title = "Predicted vs Actual Stability Charge",
+       x = "Actual Stability Charge",
+       y = "Predicted Stability Charge")
+
+ggplot(mapping = aes(alpha = 0.4)) + 
+  geom_density(aes(x = Stability.Charge, fill = "Actual"), data = testData) + 
+  geom_density(aes(x = predictions, fill = "Predicted"), data = testData) + 
+  theme_minimal() +
+  labs(title = "Density Plot of Actual vs Predicted Stability Charge",
+       x = "Stability Charge",
+       y = "Density") +
+  scale_fill_manual(name = "Legend", values = c("Actual" = "red", "Predicted" = "blue"))
+
+```
+
+## Stability Discharge
+
+W przypadku predykcji stabilności rozładowania, wykorzystamy las losowy (random forest).
+
+```{r n10_predictions_disCharge}
+
+predictors_discharge <- mydata[, c("Average.Voltage", "Max.Delta.Volume", "Volumetric.Capacity")]
+response_discharge <- mydata$Stability.Discharge
+
+trainIndex_discharge <- createDataPartition(response_discharge, p = .8, 
+                                            list = FALSE, 
+                                            times = 1)
+trainData_discharge <- mydata[trainIndex_discharge,]
+testData_discharge <- mydata[-trainIndex_discharge,]
+tunegrid <- expand.grid(.mtry = c(2, 3, 4))
+
+model_discharge <- train(Stability.Discharge ~ Average.Voltage + Volumetric.Capacity, 
+                         data = trainData_discharge, 
+                         method = "rf",
+                         tuneGrid = tunegrid,
+                         ntree=10)
+
+#print(summary(model_discharge))
+
+predictions_discharge <- predict(model_discharge, newdata = testData_discharge)
+
+#postResample(predictions_discharge, testData_discharge$Stability.Discharge)
+evaluation <- postResample(predictions_discharge, testData_discharge$Stability.Discharge)
+
+summary_table <- data.frame(
+  Metric = c("Number of Trees", "Mtry", "RMSE", "Rsquared", "MAE"),
+  Value = c(model_discharge$finalModel$ntree, 
+            model_discharge$finalModel$mtry, 
+            evaluation["RMSE"], 
+            evaluation["Rsquared"], 
+            evaluation["MAE"])
+)
+
+kable(summary_table, col.names = c("Metric", "Value"), caption = "Model Summary for Stability.Discharge")
+
+ggplot(testData_discharge, aes(x = Stability.Discharge, y = predictions_discharge)) +
+  geom_point(color = "black") +
+  geom_abline(slope = 1, intercept = 0, color = "red") +
+  theme_minimal() +
+  labs(title = "Predicted vs Actual Stability Discharge",
+       x = "Actual Stability Discharge",
+       y = "Predicted Stability Discharge")
+
+ggplot(mapping = aes(alpha = 0.4)) + 
+  geom_density(aes(x = Stability.Discharge, fill = "Actual"), data = testData_discharge) + 
+  geom_density(aes(x = predictions_discharge, fill = "Predicted"), data = testData_discharge) + 
+  theme_minimal() +
+  labs(title = "Density Plot of Actual vs Predicted Stability Discharge",
+       x = "Stability Discharge",
+       y = "Density") +
+  scale_fill_manual(name = "Legend", values = c("Actual" = "red", "Predicted" = "blue"))
+```
