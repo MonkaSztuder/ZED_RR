@@ -1,0 +1,375 @@
+---
+title: "Battery Materials Analysis Report"
+author: "Monika Sztuder"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+set.seed(123)
+```
+# Wykorzystane biblioteki
+
+- tidyverse
+- readr
+- ggplot2
+- plotly
+- corrplot
+- caret
+- DT
+- knitr
+
+```{r import, include=FALSE}
+library(tidyverse)
+library(readr)
+library(ggplot2)
+library(plotly)
+library(corrplot)
+library(caret)
+library(DT)
+library(knitr)
+
+```
+
+```{r prt, echo=FALSE}
+prettyTable <- function(table_df, round_digits=2) {
+    DT::datatable(table_df, style="bootstrap", filter = "top", rownames = FALSE, extensions = "Buttons", options = list(dom = 'Bfrtip', buttons = c('copy', 'csv', 'excel', 'pdf', 'print'))) %>% formatRound(names(dplyr::select_if(table_df, is.numeric)), round_digits)
+}
+```
+
+# Zbiór Danych
+Suma brakujących wartości w zbiorze danych wynosi **0**.
+```{r n2, echo=FALSE, cache=TRUE}
+urlfile="https://raw.githubusercontent.com/MonkaSztuder/ZED_RR/refs/heads/main/mp_batteries.csv"
+
+data<-read.csv(url(urlfile))
+mydata<-data.frame(data)
+
+#prettyTable(head(mydata))
+selected_columns <- mydata[, c("Battery.ID", "Battery.Formula", "Working.Ion", "Formula.Charge", "Formula.Discharge","Max.Delta.Volume")]
+kable(head(selected_columns), caption = "Przykładowe dane z wybranymi kolumnami")
+selected_columns <- mydata[, c("Average.Voltage", "Gravimetric.Capacity", "Volumetric.Capacity", "Gravimetric.Energy")]
+kable(head(selected_columns))
+selected_columns <- mydata[, c("Volumetric.Energy", "Atomic.Fraction.Charge", "Atomic.Fraction.Discharge")]
+kable(head(selected_columns))
+selected_columns <- mydata[, c("Stability.Charge", "Stability.Discharge", "Steps", "Max.Voltage.Step")]
+kable(head(selected_columns))
+sum<- sum(is.na(mydata))
+#print(sum)
+```
+
+```{r n3, include=FALSE}
+
+mydata <- mydata %>% 
+  replace(is.na(.), 0)
+```
+
+# Analiza podstawowych statystyk
+```{r n4, message=FALSE, include=FALSE}
+dataset_size <- dim(mydata)
+dataset_size
+
+#summary(mydata)
+```
+
+## Rozmiar zbioru danych
+Liczba obserwacji: **4351**  
+Liczba atrybutów: **17**
+
+## Atrybuty
+
+- **Battery ID**: Identyfikator baterii.
+- **Battery Formula**: Wzór chemiczny materiału baterii.
+- **Working Ion**: Główny jon, który odpowiada za transport ładunku w baterii.
+- **Formula Charge**: Wzór chemiczny materiału baterii w stanie naładowanym.
+- **Formula Discharge**: Wzór chemiczny materiału baterii w stanie rozładowanym.
+- **Max Delta Volume**: Zmiana objętości w % dla danego kroku napięcia za pomocą wzoru: max(charge, discharge)/min(charge, discharge) -1.
+- **Average Voltage**: Średnie napięcie dla poszczególnego kroku napięcia.
+- **Gravimetric Capacity**: Pojemność grawimetryczna, czyli ilość energii na jednostkę masy (mAh/g).
+- **Volumetric Capacity**: Pojemność wolumetryczna, czyli ilość energii na jednostkę objętości (mAh/cm³).
+- **Gravimetric Energy**: Gęstość energii w odniesieniu do masy baterii (Wh/kg).
+- **Volumetric Energy**: Gęstość energii w odniesieniu do objętości baterii (Wh/L).
+- **Atomic Fraction Charge**: Udział atomowy składników w stanie naładowanym.
+- **Atomic Fraction Discharge**: Udział atomowy składników w stanie rozładowanym.
+- **Stability Charge**: Wskaźnik stabilności materiału w stanie naładowanym.
+- **Stability Discharge**: Wskaźnik stabilności materiału w stanie rozładowanym.
+- **Steps**: Liczba odrębnych kroków napięcia od pełnego naładowania do rozładowania, oparta na stabilnych stanach pośrednich.
+- **Max Voltage Step**: Maksymalna bezwzględna różnica między sąsiednimi krokami napięcia.
+
+## Podsumowanie 
+
+```{r attribute_summary, echo=FALSE}
+attribute_summary <- data.frame(
+  Attribute = c("Max.Delta.Volume", "Average.Voltage", "Gravimetric.Capacity", "Volumetric.Capacity", "Gravimetric.Energy", "Volumetric.Energy", "Atomic.Fraction.Charge", "Atomic.Fraction.Discharge", "Stability.Charge", "Stability.Discharge", "Steps", "Max.Voltage.Step"),
+  Min = c(0.00002, -7.755, 5.176, 24.08, -583.5, -2208.1, 0.00000, 0.007407, 0.00000, 0.00000, 1.000, 0.0000),
+  `1st Qu.` = c(0.01747, 2.226, 88.108, 311.62, 211.7, 821.6, 0.00000, 0.086957, 0.03301, 0.01952, 1.000, 0.0000),
+  Median = c(0.04203, 3.301, 130.691, 507.03, 401.8, 1463.8, 0.00000, 0.142857, 0.07319, 0.04878, 1.000, 0.0000),
+  Mean = c(0.37531, 3.083, 158.291, 610.62, 444.1, 1664.0, 0.03986, 0.159077, 0.14257, 0.12207, 1.167, 0.1503),
+  `3rd Qu.` = c(0.08595, 4.019, 187.600, 722.75, 614.4, 2252.3, 0.04762, 0.200000, 0.13160, 0.09299, 1.000, 0.0000),
+  Max = c(293.19322, 54.569, 2557.627, 7619.19, 5926.9, 18305.9, 0.90909, 0.993333, 6.48710, 6.27781, 6.000, 26.9607)
+)
+
+prettyTable(attribute_summary)
+```
+
+
+# Analiza atrybutów
+
+## Working Ion
+Najbardziej widocznym jonem w zbiorze danych jest lit (Li). Nie jest to zaskakujące, biorąc pod uwagę powszechne wykorzystanie baterii litowo-jonowych w różnych zastosowaniach,Sód (Na) i potas (K) są również stosunkowo powszechne co można zaobserować na wykresie.
+```{r n5_WI}
+ggplot(mydata, aes(x = Working.Ion)) +
+  geom_bar(fill = "lightblue", color = "black") +
+  theme_minimal() +
+  labs(title = "Distribution of Working Ion",
+       x = "Working Ion")
+```
+
+## Battery Formula
+```{r n5_BF}
+top_formulas <- mydata %>%
+  count(Battery.Formula) %>%
+  arrange(desc(n)) %>%
+  head(10)
+
+kable(top_formulas, col.names = c("Battery Formula", "Count"), caption = "10 Najczęściej Używanych Battery Formula")
+```
+
+## Formula Charge
+```{r n5_FC_table}
+top_formula_charge <- mydata %>%
+  count(Formula.Charge) %>%
+  arrange(desc(n)) %>%
+  head(10)
+
+kable(top_formula_charge, col.names = c("Formula Charge", "Count"), caption = "10 Najczęściej Używanych Formula Charge")
+```
+
+## Formula Discharge
+
+```{r n5_FD_table}
+top_formula_discharge <- mydata %>%
+  count(Formula.Discharge) %>%
+  arrange(desc(n)) %>%
+  head(10)
+
+kable(top_formula_discharge, col.names = c("Formula Discharge", "Count"), caption = "10 Najczęściej Używanych Formula Discharges")
+```
+
+## Average Voltage
+Znacząca większość obserwacji dotyczyła średnich napięć z przedziału od 0 do około 10 V. Istnieje niewielka liczba obserwacji dotyczących zarówno bardzo niskich (poniżej -10 V), jak i bardzo wysokich (powyżej 10 V) wartości średniego napięcia. 
+
+```{r n5_AV}
+ggplot(mydata, aes(x = Average.Voltage)) +
+  geom_histogram(binwidth = 0.1, fill = "lightblue", color = "black") +
+  theme_minimal() +
+  labs(title = "Distribution of Average Voltage",
+       x = "Average Voltage (V)",
+       y = "Frequency")+ 
+  xlim(-10,20)
+```
+
+
+## Max Delta Volume
+Większość obserwacji dotyczyła niewielkich zmian objętości.
+
+
+```{r n5_MDV}
+ggplot(mydata, aes(x = Max.Delta.Volume)) +
+  geom_histogram(binwidth = 0.1, fill = "lightgreen", color = "black") +
+  theme_minimal() +
+  labs(title = "Distribution of Max Delta Volume",
+       x = "Max Delta Volume",
+       y = "Frequency")+ 
+  xlim(0,10)+
+  ylim(0,1500)
+```
+
+
+## Gravimetric Capacity
+Największa ilość próbek ma pojemność grawimeryczną w przedziale od 0 do około 500 mAh/g
+
+
+```{r n5_GC}
+ggplot(mydata, aes(x = Gravimetric.Capacity)) +
+  geom_histogram(binwidth = 10, fill = "lightcoral", color = "black") +
+  theme_minimal() +
+  labs(title = "Distribution of Gravimetric Capacity",
+       x = "Gravimetric Capacity (mAh/g)",
+       y = "Frequency")+ 
+  xlim(-10,2600)
+
+```
+
+
+## Volumetric Capacity
+Znacząca większość próbek ma pojemność wolumetryczną w przedziale od 0 do około 2000 mAh/cm3
+
+```{r n5_VC}
+ggplot(mydata, aes(x = Volumetric.Capacity)) +
+  geom_histogram(binwidth = 50, fill = "lightblue", color = "black") +
+  theme_minimal() +
+  labs(title = "Distribution of Volumetric Capacity",
+       x = "Volumetric Capacity (mAh/cm³)",
+       y = "Frequency")+ 
+  xlim(-10,7300)
+```
+
+
+## Gravimetric Energy
+Większość próbek wykazuje gęstość energii w zakresie od 0 do około 2000 Wh/kg.
+
+
+```{r n5_GE}
+ggplot(mydata, aes(x = Gravimetric.Energy)) +
+  geom_histogram(binwidth = 50, fill = "lightgreen", color = "black") +
+  theme_minimal() +
+  labs(title = "Distribution of Gravimetric Energy",
+       x = "Gravimetric Energy (Wh/kg)",
+       y = "Frequency")+ 
+  xlim(-600,6000)
+```
+
+
+## Volumetric Energy
+Przeważająca liczba próbek ma gęstość energii wolumetrycznej w zakresie od 0 do około 5000 Wh/L.
+
+
+```{r n5_VE}
+ggplot(mydata, aes(x = Volumetric.Energy)) +
+  geom_histogram(binwidth = 100, fill = "lightcoral", color = "black") +
+  theme_minimal() +
+  labs(title = "Distribution of Volumetric Energy",
+       x = "Volumetric Energy (Wh/L)",
+       y = "Frequency")+ 
+  xlim(-2300,19000)
+```
+
+
+## Stability Charge
+Znacząca większość obserwacji dotyczyła niskich wartości ładunku stabilizującego, skupionych w przedziale od 0 do około 0,5 jednostki na osi X.
+
+```{r n5_SC}
+ggplot(mydata, aes(x = Stability.Charge)) +
+  geom_histogram(binwidth = 0.1, fill = "lightblue", color = "black") +
+  theme_minimal() +
+  labs(title = "Distribution of Stability Charge",
+       x = "Stability Charge",
+       y = "Frequency")+ 
+  xlim(0,2)
+```
+
+# Korelacje między zmiennymi
+## Macierz korelacji
+
+Macierz korelacji doskonale sprawdza się do identyfikowania zależności między różnymi atrybutami (cechami) danych. Wykorzystamy ją aby sprawdzić współczynnik korelacji między naszymi atrybutami. 
+Wartość tego współczynnika mieści się w przedziale od -1 do 1, gdzie:
+
+- 1:  doskonała korelacja dodatnia (gdy jeden atrybut rośnie, drugi również rośnie)
+- -1:  doskonała korelacja ujemna (gdy jeden atrybut rośnie, drugi maleje)
+- 0:  brak korelacji
+
+```{r cor}
+correlation_matrix <- cor(mydata[, c("Max.Delta.Volume", "Average.Voltage", "Gravimetric.Capacity", "Volumetric.Capacity", "Gravimetric.Energy", "Volumetric.Energy", "Atomic.Fraction.Charge", "Atomic.Fraction.Discharge", "Stability.Charge", "Stability.Discharge", "Steps", "Max.Voltage.Step")], use = "complete.obs")
+
+corrplot(correlation_matrix, method = "color", type = "upper", tl.col = "black", tl.srt = 45)
+```
+
+Analizując otrzymają macierz, warto przyjrzeć się następującym parom atrybutów:
+
+### "Gravimetric Energy" vs "Volumetric.Energy"
+Współczynnik korelacji 0.9283 wskazuje na bardzo silny związek dodatni 
+między gęstością energii grawimetrycznej a wolumetrycznej. 
+Oznacza to, że materiały, które mogą zmagazynować więcej energii 
+w stosunku do swojej masy, zazwyczaj mogą również zmagazynować więcej 
+energii w stosunku do swojej objętości.
+
+```{r n7_GE_VE}
+correlation_coefficient_ge_ve <- cor(mydata$Gravimetric.Energy, mydata$Volumetric.Energy, use = "complete.obs")
+
+print(paste("Współczynnik korelacji -> Gravimetric Energy and Volumetric Energy:", correlation_coefficient_ge_ve))
+
+ggplot(mydata, aes(x = Gravimetric.Energy, y = Volumetric.Energy)) +
+  geom_point(fill = "lightblue", color = "black") +
+  geom_smooth(method = "lm", col = "darkred") +
+  theme_minimal() +
+  labs(title = "Gravimetric Energy vs Volumetric Energy",
+       x = "Gravimetric Energy (Wh/kg)",
+       y = "Volumetric Energy (Wh/L)") +
+  xlim(-600, 6000) +
+  ylim(-2300, 19000)
+```
+
+
+### "Gravimetric.Capacity" vs "Volumetric.Capacity"
+Na podstawie współczynnika korelacji między pojemnością grawimetryczną a 
+pojemnością wolumetryczną (0.8584), możemy stwierdzić, że istnieje silna, 
+dodatnia zależność między tymi dwoma parametrami.
+```{r n7_GC_VC}
+correlation_coefficient_gc_vc <- cor(mydata$Gravimetric.Capacity, mydata$Volumetric.Capacity, use = "complete.obs")
+
+print(paste("Współczynnik korelacji -> Gravimetric Capacity and Volumetric Capacity:", correlation_coefficient_gc_vc))
+
+ggplot(mydata, aes(x = Gravimetric.Capacity, y = Volumetric.Capacity)) +
+  geom_point(fill = "lightblue", color = "black") +
+  geom_smooth(method = "lm", col = "darkred") +
+  theme_minimal() +
+  labs(title = "Gravimetric Capacity vs Volumetric Capacity",
+       x = "Gravimetric Capacity (mAh/g)",
+       y = "Volumetric Capacity (mAh/cm³)") +
+  xlim(-10, 2600) +
+  ylim(-10, 7300)
+```
+
+### "Average Voltage" vs "Volumetric.Capacity"
+Współczynnik korelacji -0.2128 między średnim napięciem a pojemnością wolumetryczną 
+wskazuje na słabą, ujemną korelację między tymi dwoma parametrami. 
+
+```{r n7_AV_VC}
+correlation_coefficient_av_vc <- cor(mydata$Average.Voltage, mydata$Volumetric.Capacity, use = "complete.obs")
+
+print(paste("Współczynnik korelacji -> Average Voltage and Volumetric Capacity:", correlation_coefficient_av_vc))
+
+ggplot(mydata, aes(x = Average.Voltage, y = Volumetric.Capacity)) +
+  geom_point(fill = "lightblue", color = "black") +
+  geom_smooth(method = "lm", col = "darkred") +
+  theme_minimal() +
+  labs(title = "Average Voltage vs Volumetric Capacity",
+       x = "Average Voltage (V)",
+       y = "Volumetric Capacity (mAh/cm³)") +
+  xlim(-10, 20) +
+  ylim(-10, 7300)
+```
+
+### "Volumetric Capacity" vs "Atomic Fraction Discharge"
+Współczynnik korelacji 0.6180 między pojemnością wolumetryczną a 
+ułamkiem atomowym rozładowania wskazuje na umiarkowaną, 
+dodatnią zależność między tymi dwoma parametrami. 
+Oznacza to, że ogólnie, materiały o większej pojemności wolumetrycznej 
+mają tendencję do większego ułamka atomów zaangażowanych w proces rozładowania.
+
+```{r n7_VC_AFD}
+correlation_coefficient_vc_afd <- cor(mydata$Volumetric.Capacity, mydata$Atomic.Fraction.Discharge, use = "complete.obs")
+
+print(paste("Współczynnik korelacji -> Volumetric Capacity and Atomic Fraction Discharge:", correlation_coefficient_vc_afd))
+
+ggplot(mydata, aes(x = Volumetric.Capacity, y = Atomic.Fraction.Discharge)) +
+  geom_point(fill = "lightblue", color = "black") +
+  geom_smooth(method = "lm", col = "darkred") +
+  theme_minimal() +
+  labs(title = "Volumetric Capacity vs Atomic Fraction Discharge",
+       x = "Volumetric Capacity (mAh/cm³)",
+       y = "Atomic Fraction Discharge") +
+  xlim(-10, 7300) +
+  ylim(0, 1)
+```
+
+

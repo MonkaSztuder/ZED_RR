@@ -2,3 +2,6 @@
 .Rhistory
 .RData
 .Ruserdata
+
+/notebook_cache
+*.Rproj
