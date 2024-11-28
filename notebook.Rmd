@@ -6,6 +6,7 @@ output:
   html_document:
     toc: true
     toc_float: true
+    code_folding: "hide"
 ---
 
 ```{r setup, include=FALSE}
@@ -16,6 +17,13 @@ knitr::opts_chunk$set(
 )
 set.seed(123)
 ```
+# Podsumowanie
+Raport powstał w celu analizy zbioru danych dotyczącego baterii udostępnionego przez 
+Materials Project, inicjatywę naukową Departamentu Energii USA, której celem jest 
+dostarczanie otwartych danych i narzędzi do analizy materiałów.
+
+Podczas analizy skupiono się na identyfikacji zależności między różnymi atrybutamibaterii, takimi jak pojemność, gęstość energii, napięcie, czy stabilność. W raporcie wykorzystano różne techniki wizualizacji danych,  aby lepiej zrozumieć zależności między atrybutami. Na końcu przeprowadzono predykcje stabilności naładowania i  rozładowania baterii, wykorzystując regresję liniową oraz las losowy z walidacją krzyżową.
+
 # Wykorzystane biblioteki
 
 - tidyverse
@@ -49,7 +57,6 @@ prettyTable <- function(table_df, round_digits=2) {
 ```
 
 # Zbiór Danych
-Suma brakujących wartości w zbiorze danych wynosi **0**.
 ```{r n2, echo=FALSE, cache=TRUE}
 urlfile="https://raw.githubusercontent.com/MonkaSztuder/ZED_RR/refs/heads/main/mp_batteries.csv"
 
@@ -69,6 +76,8 @@ sum<- sum(is.na(mydata))
 #print(sum)
 ```
 
+Suma brakujących wartości w zbiorze danych wynosi **`r sum`**.
+
 ```{r n3, include=FALSE}
 
 mydata <- mydata %>% 
@@ -84,8 +93,8 @@ dataset_size
 ```
 
 ## Rozmiar zbioru danych
-Liczba obserwacji: **4351**  
-Liczba atrybutów: **17**
+Liczba obserwacji: **`r nrow(mydata)`**  
+Liczba atrybutów: **`r ncol(mydata)`**
 
 ## Atrybuty
 
@@ -273,12 +282,7 @@ ggplot(mydata, aes(x = Stability.Charge)) +
 # Korelacje między zmiennymi
 ## Macierz korelacji
 
-Macierz korelacji doskonale sprawdza się do identyfikowania zależności między różnymi atrybutami (cechami) danych. Wykorzystamy ją aby sprawdzić współczynnik korelacji między naszymi atrybutami. 
-Wartość tego współczynnika mieści się w przedziale od -1 do 1, gdzie:
-
-- 1:  doskonała korelacja dodatnia (gdy jeden atrybut rośnie, drugi również rośnie)
-- -1:  doskonała korelacja ujemna (gdy jeden atrybut rośnie, drugi maleje)
-- 0:  brak korelacji
+Macierz korelacji doskonale sprawdza się do identyfikowania zależności między różnymi atrybutami (cechami) danych. Wykorzystano ją aby sprawdzić współczynnik korelacji między naszymi atrybutami. 
 
 ```{r cor}
 correlation_matrix <- cor(mydata[, c("Max.Delta.Volume", "Average.Voltage", "Gravimetric.Capacity", "Volumetric.Capacity", "Gravimetric.Energy", "Volumetric.Energy", "Atomic.Fraction.Charge", "Atomic.Fraction.Discharge", "Stability.Charge", "Stability.Discharge", "Steps", "Max.Voltage.Step")], use = "complete.obs")
@@ -286,20 +290,16 @@ correlation_matrix <- cor(mydata[, c("Max.Delta.Volume", "Average.Voltage", "Gra
 corrplot(correlation_matrix, method = "color", type = "upper", tl.col = "black", tl.srt = 45)
 ```
 
-Analizując otrzymają macierz, warto przyjrzeć się następującym parom atrybutów:
-
 ### "Gravimetric Energy" vs "Volumetric.Energy"
-Współczynnik korelacji 0.9283 wskazuje na bardzo silny związek dodatni 
-między gęstością energii grawimetrycznej a wolumetrycznej. 
-Oznacza to, że materiały, które mogą zmagazynować więcej energii 
-w stosunku do swojej masy, zazwyczaj mogą również zmagazynować więcej 
-energii w stosunku do swojej objętości.
-
-```{r n7_GE_VE}
+```{r n7_GE_VE_corr}
 correlation_coefficient_ge_ve <- cor(mydata$Gravimetric.Energy, mydata$Volumetric.Energy, use = "complete.obs")
 
-print(paste("Współczynnik korelacji -> Gravimetric Energy and Volumetric Energy:", correlation_coefficient_ge_ve))
+#print(paste("Współczynnik korelacji -> Gravimetric Energy and Volumetric Energy:", correlation_coefficient_ge_ve))
+```
+Współczynnik korelacji **`r correlation_coefficient_ge_ve`** wskazuje na silny związek 
+między gęstością energii grawimetrycznej a wolumetrycznej. 
 
+```{r n7_GE_VE}
 ggplot(mydata, aes(x = Gravimetric.Energy, y = Volumetric.Energy)) +
   geom_point(fill = "lightblue", color = "black") +
   geom_smooth(method = "lm", col = "darkred") +
@@ -313,14 +313,16 @@ ggplot(mydata, aes(x = Gravimetric.Energy, y = Volumetric.Energy)) +
 
 
 ### "Gravimetric.Capacity" vs "Volumetric.Capacity"
-Na podstawie współczynnika korelacji między pojemnością grawimetryczną a 
-pojemnością wolumetryczną (0.8584), możemy stwierdzić, że istnieje silna, 
-dodatnia zależność między tymi dwoma parametrami.
-```{r n7_GC_VC}
+```{r n7_GC_VC_corr}
 correlation_coefficient_gc_vc <- cor(mydata$Gravimetric.Capacity, mydata$Volumetric.Capacity, use = "complete.obs")
 
-print(paste("Współczynnik korelacji -> Gravimetric Capacity and Volumetric Capacity:", correlation_coefficient_gc_vc))
+#print(paste("Współczynnik korelacji -> Gravimetric Capacity and Volumetric Capacity:", correlation_coefficient_gc_vc))
+```
 
+Współczynnik korelacji między pojemnością grawimetryczną a 
+pojemnością wolumetryczną wynosi **`r correlation_coefficient_gc_vc`**.
+
+```{r n7_GC_VC}
 ggplot(mydata, aes(x = Gravimetric.Capacity, y = Volumetric.Capacity)) +
   geom_point(fill = "lightblue", color = "black") +
   geom_smooth(method = "lm", col = "darkred") +
@@ -332,38 +334,16 @@ ggplot(mydata, aes(x = Gravimetric.Capacity, y = Volumetric.Capacity)) +
   ylim(-10, 7300)
 ```
 
-### "Average Voltage" vs "Volumetric.Capacity"
-Współczynnik korelacji -0.2128 między średnim napięciem a pojemnością wolumetryczną 
-wskazuje na słabą, ujemną korelację między tymi dwoma parametrami. 
-
-```{r n7_AV_VC}
-correlation_coefficient_av_vc <- cor(mydata$Average.Voltage, mydata$Volumetric.Capacity, use = "complete.obs")
-
-print(paste("Współczynnik korelacji -> Average Voltage and Volumetric Capacity:", correlation_coefficient_av_vc))
-
-ggplot(mydata, aes(x = Average.Voltage, y = Volumetric.Capacity)) +
-  geom_point(fill = "lightblue", color = "black") +
-  geom_smooth(method = "lm", col = "darkred") +
-  theme_minimal() +
-  labs(title = "Average Voltage vs Volumetric Capacity",
-       x = "Average Voltage (V)",
-       y = "Volumetric Capacity (mAh/cm³)") +
-  xlim(-10, 20) +
-  ylim(-10, 7300)
-```
-
 ### "Volumetric Capacity" vs "Atomic Fraction Discharge"
-Współczynnik korelacji 0.6180 między pojemnością wolumetryczną a 
-ułamkiem atomowym rozładowania wskazuje na umiarkowaną, 
-dodatnią zależność między tymi dwoma parametrami. 
-Oznacza to, że ogólnie, materiały o większej pojemności wolumetrycznej 
-mają tendencję do większego ułamka atomów zaangażowanych w proces rozładowania.
-
-```{r n7_VC_AFD}
+```{r n7_VC_AFD_corr}
 correlation_coefficient_vc_afd <- cor(mydata$Volumetric.Capacity, mydata$Atomic.Fraction.Discharge, use = "complete.obs")
 
-print(paste("Współczynnik korelacji -> Volumetric Capacity and Atomic Fraction Discharge:", correlation_coefficient_vc_afd))
+#print(paste("Współczynnik korelacji -> Volumetric Capacity and Atomic Fraction Discharge:", correlation_coefficient_vc_afd))
+```
 
+Współczynnik korelacji wynosi **`r correlation_coefficient_vc_afd`**. 
+
+```{r n7_VC_AFD}
 ggplot(mydata, aes(x = Volumetric.Capacity, y = Atomic.Fraction.Discharge)) +
   geom_point(fill = "lightblue", color = "black") +
   geom_smooth(method = "lm", col = "darkred") +
@@ -409,7 +389,6 @@ summary_table <- data.frame(
 
 knitr::kable(summary_table[2], col.names = c("Metric", "Value"), caption = "Model Summary for Stability.Charge")
 
-
 ggplot(testData, aes(x = Stability.Charge, y = predictions)) +
   geom_point(color = "black") +
   geom_abline(slope = 1, intercept = 0, color = "red") +
@@ -431,32 +410,26 @@ ggplot(mapping = aes(alpha = 0.4)) +
 
 ## Stability Discharge
 
-W przypadku predykcji stabilności rozładowania, wykorzystamy las losowy (random forest).
+W przypadku predykcji stabilności rozładowania, wykorzystamy random forest z walidacją krzyżową.
 
 ```{r n10_predictions_disCharge}
-
 predictors_discharge <- mydata[, c("Average.Voltage", "Max.Delta.Volume", "Volumetric.Capacity")]
 response_discharge <- mydata$Stability.Discharge
 
-trainIndex_discharge <- createDataPartition(response_discharge, p = .8, 
-                                            list = FALSE, 
-                                            times = 1)
-trainData_discharge <- mydata[trainIndex_discharge,]
-testData_discharge <- mydata[-trainIndex_discharge,]
+train_control <- trainControl(method = "cv", number = 10)
+
 tunegrid <- expand.grid(.mtry = c(2, 3, 4))
 
 model_discharge <- train(Stability.Discharge ~ Average.Voltage + Volumetric.Capacity, 
-                         data = trainData_discharge, 
+                         data = mydata, 
                          method = "rf",
                          tuneGrid = tunegrid,
-                         ntree=10)
+                         trControl = train_control,
+                         ntree = 10)
 
-#print(summary(model_discharge))
+predictions_discharge <- predict(model_discharge, newdata = mydata)
 
-predictions_discharge <- predict(model_discharge, newdata = testData_discharge)
-
-#postResample(predictions_discharge, testData_discharge$Stability.Discharge)
-evaluation <- postResample(predictions_discharge, testData_discharge$Stability.Discharge)
+evaluation <- postResample(predictions_discharge, mydata$Stability.Discharge)
 
 summary_table <- data.frame(
   Metric = c("Number of Trees", "Mtry", "RMSE", "Rsquared", "MAE"),
@@ -469,7 +442,7 @@ summary_table <- data.frame(
 
 kable(summary_table, col.names = c("Metric", "Value"), caption = "Model Summary for Stability.Discharge")
 
-ggplot(testData_discharge, aes(x = Stability.Discharge, y = predictions_discharge)) +
+ggplot(mydata, aes(x = Stability.Discharge, y = predictions_discharge)) +
   geom_point(color = "black") +
   geom_abline(slope = 1, intercept = 0, color = "red") +
   theme_minimal() +
@@ -478,8 +451,8 @@ ggplot(testData_discharge, aes(x = Stability.Discharge, y = predictions_discharg
        y = "Predicted Stability Discharge")
 
 ggplot(mapping = aes(alpha = 0.4)) + 
-  geom_density(aes(x = Stability.Discharge, fill = "Actual"), data = testData_discharge) + 
-  geom_density(aes(x = predictions_discharge, fill = "Predicted"), data = testData_discharge) + 
+  geom_density(aes(x = Stability.Discharge, fill = "Actual"), data = mydata) + 
+  geom_density(aes(x = predictions_discharge, fill = "Predicted"), data = mydata) + 
   theme_minimal() +
   labs(title = "Density Plot of Actual vs Predicted Stability Discharge",
        x = "Stability Discharge",
