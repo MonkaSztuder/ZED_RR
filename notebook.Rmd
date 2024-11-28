@@ -136,7 +136,8 @@ prettyTable(attribute_summary)
 # Analiza atrybutów
 
 ## Working Ion
-Najbardziej widocznym jonem w zbiorze danych jest lit (Li). Nie jest to zaskakujące, biorąc pod uwagę powszechne wykorzystanie baterii litowo-jonowych w różnych zastosowaniach,Sód (Na) i potas (K) są również stosunkowo powszechne co można zaobserować na wykresie.
+Najbardziej widocznym jonem w zbiorze danych jest lit (Li).
+
 ```{r n5_WI}
 ggplot(mydata, aes(x = Working.Ion)) +
   geom_bar(fill = "lightblue", color = "black") +
@@ -186,7 +187,7 @@ ggplot(mydata, aes(x = Average.Voltage)) +
   labs(title = "Distribution of Average Voltage",
        x = "Average Voltage (V)",
        y = "Frequency")+ 
-  xlim(-10,20)
+  xlim(-10,10)
 ```
 
 
@@ -201,7 +202,7 @@ ggplot(mydata, aes(x = Max.Delta.Volume)) +
   labs(title = "Distribution of Max Delta Volume",
        x = "Max Delta Volume",
        y = "Frequency")+ 
-  xlim(0,10)+
+  xlim(0,5)+
   ylim(0,1500)
 ```
 
@@ -217,7 +218,7 @@ ggplot(mydata, aes(x = Gravimetric.Capacity)) +
   labs(title = "Distribution of Gravimetric Capacity",
        x = "Gravimetric Capacity (mAh/g)",
        y = "Frequency")+ 
-  xlim(-10,2600)
+  xlim(-10,1000)
 
 ```
 
@@ -232,7 +233,7 @@ ggplot(mydata, aes(x = Volumetric.Capacity)) +
   labs(title = "Distribution of Volumetric Capacity",
        x = "Volumetric Capacity (mAh/cm³)",
        y = "Frequency")+ 
-  xlim(-10,7300)
+  xlim(-10,4000)
 ```
 
 
@@ -247,7 +248,7 @@ ggplot(mydata, aes(x = Gravimetric.Energy)) +
   labs(title = "Distribution of Gravimetric Energy",
        x = "Gravimetric Energy (Wh/kg)",
        y = "Frequency")+ 
-  xlim(-600,6000)
+  xlim(-600,4000)
 ```
 
 
@@ -262,7 +263,7 @@ ggplot(mydata, aes(x = Volumetric.Energy)) +
   labs(title = "Distribution of Volumetric Energy",
        x = "Volumetric Energy (Wh/L)",
        y = "Frequency")+ 
-  xlim(-2300,19000)
+  xlim(-2300,10000)
 ```
 
 
