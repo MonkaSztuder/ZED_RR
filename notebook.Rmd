@@ -22,7 +22,13 @@ Raport powstał w celu analizy zbioru danych dotyczącego baterii udostępnioneg
 Materials Project, inicjatywę naukową Departamentu Energii USA, której celem jest 
 dostarczanie otwartych danych i narzędzi do analizy materiałów.
 
-Podczas analizy skupiono się na identyfikacji zależności między różnymi atrybutamibaterii, takimi jak pojemność, gęstość energii, napięcie, czy stabilność. W raporcie wykorzystano różne techniki wizualizacji danych,  aby lepiej zrozumieć zależności między atrybutami. Na końcu przeprowadzono predykcje stabilności naładowania i  rozładowania baterii, wykorzystując regresję liniową oraz las losowy z walidacją krzyżową.
+Podczas analizy skupiono się na identyfikacji zależności między różnymi atrybutamibaterii, 
+takimi jak pojemność, gęstość energii, napięcie, czy stabilność. W raporcie wykorzystano
+różne techniki wizualizacji danych,  aby lepiej zrozumieć zależności między atrybutami. 
+Najbardziej widocznym jonem w zbiorze danych jest lit (Li).
+Podczas analizy zaobserwowano silną korelację między gęstością energii grawimetrycznej a wolumetrycznej.
+Na końcu przeprowadzono predykcje stabilności naładowania i  rozładowania baterii, 
+wykorzystując regresję liniową oraz las losowy z walidacją krzyżową.
 
 # Wykorzystane biblioteki
 
@@ -180,21 +186,23 @@ kable(top_formula_discharge, col.names = c("Formula Discharge", "Count"), captio
 ## Average Voltage
 Znacząca większość obserwacji dotyczyła średnich napięć z przedziału od 0 do około 10 V. Istnieje niewielka liczba obserwacji dotyczących zarówno bardzo niskich (poniżej -10 V), jak i bardzo wysokich (powyżej 10 V) wartości średniego napięcia. 
 
+Wykres został przycięty na osi X, aby umożliwić czytelne przedstawienie wyników, eliminując kilka odstających obserwacji.
+
 ```{r n5_AV}
 ggplot(mydata, aes(x = Average.Voltage)) +
   geom_histogram(binwidth = 0.1, fill = "lightblue", color = "black") +
   theme_minimal() +
   labs(title = "Distribution of Average Voltage",
        x = "Average Voltage (V)",
-       y = "Frequency")+ 
-  xlim(-10,10)
+       y = "Frequency")+
+  xlim(0,10)
 ```
 
 
 ## Max Delta Volume
 Większość obserwacji dotyczyła niewielkich zmian objętości.
 
-
+Wykres został odpowiednio przycięty na osi X, aby umożliwić czytelne przedstawienie wyników, eliminując kilka odstających obserwacji.
 ```{r n5_MDV}
 ggplot(mydata, aes(x = Max.Delta.Volume)) +
   geom_histogram(binwidth = 0.1, fill = "lightgreen", color = "black") +
@@ -202,7 +210,7 @@ ggplot(mydata, aes(x = Max.Delta.Volume)) +
   labs(title = "Distribution of Max Delta Volume",
        x = "Max Delta Volume",
        y = "Frequency")+ 
-  xlim(0,5)+
+  xlim(0,1)+
   ylim(0,1500)
 ```
 
@@ -217,8 +225,7 @@ ggplot(mydata, aes(x = Gravimetric.Capacity)) +
   theme_minimal() +
   labs(title = "Distribution of Gravimetric Capacity",
        x = "Gravimetric Capacity (mAh/g)",
-       y = "Frequency")+ 
-  xlim(-10,1000)
+       y = "Frequency")
 
 ```
 
@@ -232,8 +239,7 @@ ggplot(mydata, aes(x = Volumetric.Capacity)) +
   theme_minimal() +
   labs(title = "Distribution of Volumetric Capacity",
        x = "Volumetric Capacity (mAh/cm³)",
-       y = "Frequency")+ 
-  xlim(-10,4000)
+       y = "Frequency")
 ```
 
 
@@ -247,8 +253,7 @@ ggplot(mydata, aes(x = Gravimetric.Energy)) +
   theme_minimal() +
   labs(title = "Distribution of Gravimetric Energy",
        x = "Gravimetric Energy (Wh/kg)",
-       y = "Frequency")+ 
-  xlim(-600,4000)
+       y = "Frequency")
 ```
 
 
@@ -262,8 +267,7 @@ ggplot(mydata, aes(x = Volumetric.Energy)) +
   theme_minimal() +
   labs(title = "Distribution of Volumetric Energy",
        x = "Volumetric Energy (Wh/L)",
-       y = "Frequency")+ 
-  xlim(-2300,10000)
+       y = "Frequency")
 ```
 
 
@@ -276,8 +280,7 @@ ggplot(mydata, aes(x = Stability.Charge)) +
   theme_minimal() +
   labs(title = "Distribution of Stability Charge",
        x = "Stability Charge",
-       y = "Frequency")+ 
-  xlim(0,2)
+       y = "Frequency")
 ```
 
 # Korelacje między zmiennymi
